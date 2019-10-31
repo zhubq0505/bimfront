@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset=utf-8>
+    <title>Simple Module</title>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%
+        }
+    </style>
+</head>
+
+<body>
+    <div id="StatsDiv"></div>
+    <div id="WebGLDiv"></div>
+    <script src="../js/lib/three.js"></script>
+    <script src="../js/lib/stats.js"></script>
+    <script src="../js/lib/GLTFLoader.js"></script>
+    <script src="../js/lib/TrackballControls.js"></script>
+    <script src="../js/lib/OrbitControls.js"></script>
+    <script>
+        var scene, camera, renderer, trackballControls, stats;
+        var raycaster,mouse;
+        var intersects = [];
+        var selected;
+        var orbitControl;
+        var gridHelper, axisHelper;
+        // 1.场景
+        function initScene() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xBFEFFF);
+        }
+        // 2.相机
+        function initCamera() {
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(2, 9, 12);
+            camera.lookAt(new THREE.Vector3(0, 0.2, 0.2));
+        }
+        // 3.渲染器
+        function initRenderer() {
+            // 反锯齿
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(new THREE.Color(0xEEEEEE));
+            document.getElementById("WebGLDiv").appendChild(renderer.domElement);
+        }
+        // 4.灯光
+        function initLight() {
+            var ambientLight = new THREE.AmbientLight(0x0c0c0c);
+            scene.add(ambientLight);
+            var spotLight1 = new THREE.SpotLight(0xffffff);
+            spotLight1.position.set(-400, -400, -400);
+            scene.add(spotLight1);
+            var spotLight2 = new THREE.SpotLight(0xffffff);
+            spotLight2.position.set(400, 800, 400);
+            scene.add(spotLight2);
+        }
+        // 5.轨迹球控件
+        function initTrackballControls() {
+            // 轨迹球控件
+            controls = new THREE.TrackballControls(camera, renderer.domElement);
+            // 旋转速度
+            controls.rotataSpeed = 5;
+            // 变焦速度
+            controls.zoomSpeed = 3;
+            // 平移速度
+            controls.panSpeed = 0.8;
+            // 开启惯性
+            controls.staticMoving = false;
+            // 灵敏度：动态阻尼系数
+            controls.dynamicDampingFactor = 0.2;
+            controls.minDistance = 10;
+            controls.maxDistance = 1000;
+        }
+        // 5.2 轨道控件
+        function initOrbitControls(){
+            orbitControl = new THREE.OrbitControls(camera, renderer.domElement);
+            orbitControl.addEventListener('change', render);
+        }
+        // 5.3 辅助工具
+        function initHelpers(){
+            // 坐标轴
+            axisHelper = new THREE.AxisHelper(800);
+            scene.add(axisHelper);
+            // 地面网格
+            gridHelper = new THREE.GridHelper(300, 10, 'red', 'gray');
+            gridHelper.position.y = -100;
+            gridHelper.position.x = 0;
+            scene.add(gridHelper);
+        }
+        // 6.状态控件
+        function initStats() {
+            stats = new Stats();
+            stats.setMode(0);
+            stats.domElement.style.position = 'absolute';
+            stats.domElement.style.left = '0px';
+            stats.domElement.style.top = '0px';
+            document.getElementById("StatsDiv").appendChild(stats.domElement);
+        }
+        // 7.加载gltf
+        function loadGLTF() {
+            var loader = new THREE.GLTFLoader();
+            loader.load('../modules/simplemodule/200623.gltf',
+                function (object) {
+                    console.log(object);
+                    // 模型变暗解决方法
+                    object.scene.traverse(function (child) {
+                        if (child.isMesh) {
+                            child.material.emissive = child.material.color;
+                            child.material.emissiveMap = child.material.map;
+                        }
+                    });
+                    object.castShadow = true;
+                    scene.add(object.scene);
+                }
+            );
+        }
+        // 7.1 批量加载本地文件(Windows)
+        function batchLoadGLTF() {
+            var dirname = '../modules/simplemodule/';
+            var ids = [200623, 200665, 200702, 200734, 200766, 200804, 200812, 200869];
+            var filepath;
+            var loader = new THREE.GLTFLoader();
+            ids.map(function (v, k) {
+                filepath = dirname + v + '.gltf';
+                loader.load(filepath, function (gltf) {
+                    gltf.scene.traverse(function (child) {
+                        if (child.isMesh) {
+                            child.material.emissive = child.material.color;
+                            child.material.emissiveMap = child.material.map;
+                        }
+                    });
+                    gltf.castShadow = true;
+                    scene.add(gltf.scene);
+                });
+            });
+        }
+        // 加载OBJ
+        function initContent() {
+            var mtlLoader = new THREE.MTLLoader();
+            mtlLoader.load('../../models/obj/city.mtl', function (materials) {
+                var objLoader = new THREE.OBJLoader();
+                objLoader.setMaterials(materials);
+                objLoader.load('../../models/obj/city.obj', function (object) {
+                    var scale = chroma.scale(['red', 'green', 'blue']);
+                    setRandomColor(object, scale);
+                    scene.add(object);
+                    document.getElementById('loading').style.display = 'none';
+
+                });
+            });
+        }
+        // 7.2 渲染
+        function render() {
+            renderer.render(scene, camera);
+        }
+        // 8.响应窗体大小变化
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            // trackballControls.handleResize();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            render();
+            stats.update();
+        }
+        // 9. 鼠标事件
+        function setMouseEvents() {
+            // 点击鼠标左键
+            window.addEventListener('click', function (e) {
+                if (e.button === 0) {
+                    // 屏幕坐标 -> webgl坐标
+                    mouse.x = (e.clientX / renderer.domElement.clientWidth) * 2 - 1;
+                    mouse.y = -(e.clientY / renderer.domElement.clientHeight) * 2 + 1;
+                }
+            });
+            // 点击鼠标右键
+            window.addEventListener('contextmenu', function (e) {
+                if (e.button === 2) {
+                    console.log("鼠标右键");
+                }
+            });
+            // 鼠标移动
+            // window.addEventListener('mousemove', function(e){
+            //     console.log('x:' + e.x + ',' + e.y);
+            // });
+        }
+        // 光投射器
+        function initRayCaster(){
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+            document.addEventListener('mousemove', function(){
+                event.preventDefault();
+                mouse.x = (event.clientX / window.innerHeight) * 2 - 1;
+                mouse.y = (-event.clientY / window.innerHeight) * 2 + 1;
+            }, false);
+        }
+        // 判断鼠标所在向量方向是否穿过物体
+        function renderRaycasterObj(raycaster, scene, camera, mouse){
+            raycaster.setFromCamera(mouse, camera);
+            intersects = raycaster.intersectObjects(scene.children);
+            if(intersects.length > 0){
+                var currentObj = intersects[0].object;
+                if(selected != currentObj){
+                    if((currentObj instanceof THREE.AxisHelper) || (currentObj instanceof THREE.GridHelper)){
+                        //穿过的是坐标轴线和网格线
+                        return;
+                    }
+                    selected = intersects[0].object;
+                }
+            }else{
+                selected = null;
+            }
+        }
+        // 10. 初始化
+        function init() {
+            initScene();
+            initCamera();
+            initRenderer();
+            initLight();
+            initOrbitControls();
+            initRayCaster();
+            // loadGLTF();
+            batchLoadGLTF();
+            initStats();
+            initHelpers();
+            window.addEventListener('resize', onWindowResize, false);
+            // setMouseEvents();
+        }
+
+        // 11. 动画
+        function animate() {
+            // 鼠标单击
+            // raycaster.setFromCamera(mouse, camera);
+            // intersects = raycaster.intersectObjects(scene.children);
+            // 选中同一物体不需要更新
+            // if (selected !== intersects[0]) {
+            //     selected && selected.object.material.color.set(0x87CEEB);
+            //     intersects.length && intersects[0].object.set(0xff0000);
+            //     selected = intersects[0];
+            //     document.body.style.cursor = 'pointer';
+            // }
+            // if(intersects[0] === undefined){
+            //     document.body.style.cursor = 'auto';
+            // }
+            renderRaycasterObj(raycaster, scene, camera, mouse);
+            // 更新控制器
+            // trackballControls.update();
+            render();
+            // 统计FPS
+            stats.update();
+            requestAnimationFrame(animate);
+        }
+        function renderScene() {
+            init();
+            animate();
+        }
+        window.onload = renderScene;
+    </script>
+</body>
+
+</html>

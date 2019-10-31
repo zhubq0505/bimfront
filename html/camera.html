@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset=utf-8>
+    <title>Camera</title>
+    <style>
+        body {
+            margin: 0;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%
+        }
+    </style>
+</head>
+
+<body>
+    <div id="StatsDiv"></div>
+    <div id="WebGLDiv"></div>
+    <script src="../js/lib/three.js"></script>
+    <script src="../js/lib/stats.js"></script>
+    <script>
+        var scene = new THREE.Scene();
+        // console.log('scene position:' + scene.position.x + "," + scene.position.y + "," + scene.position.z);
+        var camera = new THREE.PerspectiveCamera(90, window.innerWidth / window.innerHeight, 0.1, 1000);
+        // console.log('camera position:' + camera.position.x + "," + camera.position.y + "," + camera.position.z);
+        var up = camera.up;
+        console.log("camera up:" + up.x + "," + up.y + "," + up.z);
+
+        camera.position.x = 3;
+        camera.position.y = 3;
+        camera.position.z = 3;
+        camera.up.x = 0;
+        camera.up.y = -1;
+        camera.up.z = 0;
+        
+        camera.lookAt(scene.position);
+        var renderer = new THREE.WebGLRenderer();
+
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // x轴
+        function addX() {
+            var x_material = new THREE.LineBasicMaterial({
+                color: 0xff0000
+            });
+            var x_geometry = new THREE.Geometry();
+            x_geometry.vertices.push(new THREE.Vector3(-10, 0, 0), new THREE.Vector3(10, 0, 0),);
+            var x_line = new THREE.Line(x_geometry, x_material);
+            scene.add(x_line);
+        }
+        addX();
+        // y轴
+        function addY() {
+            var y_material = new THREE.LineBasicMaterial({
+                color: 0x00ff00
+            });
+            var y_geometry = new THREE.Geometry();
+            y_geometry.vertices.push(new THREE.Vector3(0, -10, 0), new THREE.Vector3(0, 10, 0),);
+            var y_line = new THREE.Line(y_geometry, y_material);
+            scene.add(y_line);
+        }
+        addY();
+        // z轴
+        function addZ(){
+            var z_material = new THREE.LineBasicMaterial({
+                color: 0x0000ff
+            });
+            var z_geometry = new THREE.Geometry();
+            z_geometry.vertices.push(new THREE.Vector3(0, 0, -10), new THREE.Vector3(0, 0, 10),);
+            var z_line = new THREE.Line(z_geometry, z_material);
+            scene.add(z_line);
+        }
+        addZ();
+        function renderScene(){
+            requestAnimationFrame(renderScene);
+            renderer.render(scene, camera);
+        }
+        renderScene();
+    </script>
+</body>
+
+</html>
