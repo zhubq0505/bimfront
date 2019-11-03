@@ -22,6 +22,7 @@
     <script src="../js/lib/three.js"></script>
     <script src="../js/lib/stats.js"></script>
     <script src="../js/lib/OrbitControls.js"></script>
+    <script src="../js/lib/dat.gui.min.js"></script>
     <script>
         var scene, camera, renderer;
         var width = window.innerWidth;
@@ -156,6 +157,25 @@
         function onDocumentMouseDown(event) {
             getIntersects(event);
         }
+
+        // 仪表盘
+        var dashboard = new function(){
+            this.sangle = 45;
+            this.hangle = camera.position.z;
+            this.enableAutoRotate = true;
+            this.numberOfObjects = scene.children.length;
+        }
+
+        var gui = new dat.GUI();
+        gui.add(dashboard, 'sangle', -360, 360).name("相机角度").onChange(val =>{
+            camera.position.z = val;
+        });
+        gui.add(dashboard, 'hangle', 0, 90).name("相机高度").listen();
+        gui.add(dashboard, 'enableAutoRotate').name("模型自转").onChange(val =>{
+            controls.autoRotate = val;
+        });
+        gui.add(dashboard, 'numberOfObjects').name("物体数量");
+
         render();
     </script>
 </body>
